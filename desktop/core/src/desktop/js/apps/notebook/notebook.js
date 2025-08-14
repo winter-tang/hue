@@ -59,6 +59,8 @@ const NOTEBOOK_MAPPING = {
 class Notebook {
   constructor(vm, notebook) {
     const self = this;
+    // 将notebook实例绑定到window对象，供其他模块访问
+    window.notebook = self;
 
     self.id = ko.observable(
       typeof notebook.id != 'undefined' && notebook.id != null ? notebook.id : null

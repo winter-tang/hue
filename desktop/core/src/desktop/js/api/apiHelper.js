@@ -1477,13 +1477,13 @@ class ApiHelper {
       type: 'POST',
       url: AUTOCOMPLETE_API_PREFIX + (isQuery ? options.path.slice(1) : options.path).join('/'),
       data: {
-        notebook: {},
-        snippet: ko.mapping.toJSON({
-          type: sourceType,
-          source: isQuery ? 'query' : 'data'
-        }),
-        cluster: ko.mapping.toJSON(options.compute ? options.compute : '""')
-      },
+          notebook: ko.mapping.toJSON(options.notebook || {}),
+          snippet: ko.mapping.toJSON({
+            type: sourceType,
+            source: isQuery ? 'query' : 'data'
+          }),
+          cluster: ko.mapping.toJSON(options.compute ? options.compute : '""')
+        },
       timeout: options.timeout
     })
       .done(data => {

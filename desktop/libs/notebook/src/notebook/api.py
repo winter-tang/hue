@@ -181,6 +181,10 @@ def execute(request, engine=None):
   notebook = json.loads(request.POST.get('notebook', '{}'))
   snippet = json.loads(request.POST.get('snippet', '{}'))
 
+  session = json.loads(request.POST.get('session', '{}'))
+  session_props = session.get('properties', [])
+  LOG.info("Session properties for substitution: %s" % session_props)
+
   response = _execute_notebook(request, notebook, snippet)
 
   return JsonResponse(response)
@@ -578,9 +582,16 @@ def autocomplete(request, server=None, database=None, table=None, column=None, n
   # Passed by check_document_access_permission but unused by APIs
   notebook = json.loads(request.POST.get('notebook', '{}'))
   snippet = json.loads(request.POST.get('snippet', '{}'))
+  session = json.loads(request.POST.get('session', '{}'))
+  LOG.info("autocomplete Session properties for notebook: %s" % notebook)
 
   try:
-    autocomplete_data = get_api(request, snippet).autocomplete(snippet, database, table, column, nested)
+    interpreter = get_api(request, snippet)
+    if snippet.get('interface') == 'sqlalchemy':
+      interpreter.options['session'] = session
+
+    autocomplete_data = interpreter.autocomplete(snippet, database, table, column, nested)
+    LOG.info('Autocomplete data retrieved successfully, keys: %s', autocomplete_data.keys())
     response.update(autocomplete_data)
   except QueryExpired:
     pass

@@ -25,14 +25,15 @@ import apiHelper from 'api/apiHelper';
  * @param {Object} [apiOptions]
  * @param {boolean} [apiOptions.silenceErrors]
  */
-const fetchAndSave = (apiHelperFunction, attributeName, entry, apiOptions) =>
+const fetchAndSave = (apiHelperFunction, attributeName, entry, apiOptions, notebook) =>
   apiHelper[apiHelperFunction]({
     sourceType: entry.dataCatalog.sourceType,
     compute: entry.compute,
     path: entry.path, // Set for DataCatalogEntry
     paths: entry.paths, // Set for MultiTableEntry
     silenceErrors: apiOptions && apiOptions.silenceErrors,
-    isView: entry.isView && entry.isView() // MultiTable entries don't have this property
+    isView: entry.isView && entry.isView(), // MultiTable entries don't have this property
+    notebook: notebook || {}
   }).done(data => {
     entry[attributeName] = data;
     entry.saveLater();

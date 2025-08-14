@@ -103,8 +103,10 @@ class SqlAlchemyApi(Api):
           vars['PASSWORD'] = _prop['value']
       raw_url = Template(self.options['url'])
       url = raw_url.safe_substitute(**vars)
+      LOG.info('Created SQLAlchemy engine with URL: %s' % url)
     else:
       url = self.options['url']
+      LOG.info('Created SQLAlchemy engine with original URL: %s' % url)
     return create_engine(url)
 
   @query_error_handler

@@ -31,14 +31,14 @@ import huePubSub from 'utils/huePubSub';
  *
  * @return {CancellablePromise}
  */
-const reloadSourceMeta = function(dataCatalogEntry, options) {
+const reloadSourceMeta = function(dataCatalogEntry, options, notebook) {
   if (dataCatalogEntry.dataCatalog.invalidatePromise) {
     const deferred = $.Deferred();
     const cancellablePromises = [];
     dataCatalogEntry.dataCatalog.invalidatePromise.always(() => {
       cancellablePromises.push(
         catalogUtils
-          .fetchAndSave('fetchSourceMetadata', 'sourceMeta', dataCatalogEntry, options)
+          .fetchAndSave('fetchSourceMetadata', 'sourceMeta', dataCatalogEntry, options, notebook)
           .done(deferred.resolve)
           .fail(deferred.reject)
       );
@@ -51,7 +51,7 @@ const reloadSourceMeta = function(dataCatalogEntry, options) {
 
   return dataCatalogEntry.trackedPromise(
     'sourceMetaPromise',
-    catalogUtils.fetchAndSave('fetchSourceMetadata', 'sourceMeta', dataCatalogEntry, options)
+    catalogUtils.fetchAndSave('fetchSourceMetadata', 'sourceMeta', dataCatalogEntry, options, notebook)
   );
 };
 
@@ -1011,10 +1011,14 @@ class DataCatalogEntry {
           }
         })
         .done(() => {
+          // 从全局上下文中获取notebook实例
+          const notebook = window.notebook || {};
+          console.log('window.notebook value:', window.notebook);
+          console.log('resolved notebook value:', notebook);
           reloadSourceMeta(self, {
             silenceErrors: apiOptions && apiOptions.silenceErrors,
             refreshCache: true
-          }).done(() => {
+          }, notebook).done(() => {
             self.getComment(apiOptions).done(deferred.resolve);
           });
         })
@@ -1417,10 +1421,18 @@ class DataCatalogEntry {
       );
     }
     if (options && options.refreshCache) {
-      return catalogUtils.applyCancellable(reloadSourceMeta(self, options));
+      // 从全局上下文中获取notebook实例
+      const notebook = window.notebook || {};
+      console.log('window.notebook value:', window.notebook);
+      console.log('resolved notebook value:', notebook);   
+      return catalogUtils.applyCancellable(reloadSourceMeta(self, options, notebook));
     }
+    // 从全局上下文中获取notebook实例
+    const notebook = window.notebook || {};
+    console.log('window.notebook value:', window.notebook);
+    console.log('resolved notebook value:', notebook);   
     return catalogUtils.applyCancellable(
-      self.sourceMetaPromise || reloadSourceMeta(self, options),
+      self.sourceMetaPromise || reloadSourceMeta(self, options, notebook),
       options
     );
   }
