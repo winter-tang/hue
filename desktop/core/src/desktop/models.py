@@ -42,7 +42,7 @@ from aws.conf import is_enabled as is_s3_enabled, has_s3_access
 from azure.conf import is_adls_enabled, has_adls_access
 from dashboard.conf import get_engines, HAS_REPORT_ENABLED
 from hadoop.conf import has_hdfs_enabled
-from kafka.conf import has_kafka
+#from kafka.conf import has_kafka
 from notebook.conf import SHOW_NOTEBOOKS, get_ordered_interpreters
 
 from desktop import appmanager
@@ -1823,14 +1823,14 @@ class ClusterConfig():
           'page': '/jobbrowser/'
         })
 
-    if has_kafka() and ANALYTIC_DB not in self.cluster_type:
-      interpreters.append({
-        'type': 'kafka',
-        'displayName': _('Streams'),
-        'buttonName': _('Browse'),
-        'tooltip': _('Kafka'),
-        'page': '/kafka/'
-      })
+#    if has_kafka() and ANALYTIC_DB not in self.cluster_type:
+#      interpreters.append({
+#        'type': 'kafka',
+#        'displayName': _('Streams'),
+#        'buttonName': _('Browse'),
+#        'tooltip': _('Kafka'),
+#        'page': '/kafka/'
+#      })
 
     if 'hbase' in self.apps and ANALYTIC_DB not in self.cluster_type:
       interpreters.append({

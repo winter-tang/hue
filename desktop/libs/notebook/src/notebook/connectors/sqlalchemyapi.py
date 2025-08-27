@@ -61,7 +61,7 @@ from librdbms.server import dbms
 
 from notebook.connectors.base import Api, QueryError, QueryExpired, _get_snippet_name, AuthenticationRequired
 from notebook.models import escape_rows
-
+from sqlalchemy.exc import ResourceClosedError
 
 CONNECTION_CACHE = {}
 LOG = logging.getLogger(__name__)
@@ -156,19 +156,23 @@ class SqlAlchemyApi(Api):
     guid = snippet['result']['handle']['guid']
     cache = CONNECTION_CACHE.get(guid)
 
+    data = []
+    meta = []
     if cache:
-      data = cache['result'].fetchmany(rows)
-      meta = cache['meta']
-      self._assign_types(data, meta)
-    else:
-      data = []
-      meta = []
+        if cache['result'] is not None:
+            try:
+                data = cache['result'].fetchmany(rows)
+            except ResourceClosedError as e:
+                LOG.error("ResourceClosedError occurred: %s" % str(e), exc_info=True)
+                data = []
+            meta = cache['meta']
+            self._assign_types(data, meta)
 
     return {
-      'has_more': data and len(data) >= rows,
-      'data': data if data else [],
-      'meta': meta if meta else [],
-      'type': 'table'
+        'has_more': data and len(data) >= rows,
+        'data': data if data else [],
+        'meta': meta if meta else [],
+        'type': 'table'
     }
 
   def _assign_types(self, results, meta):

@@ -1,8 +1,12 @@
 # Welcome to Hue (http://gethue.com) Dockerfile
 # Build an image from a remote github or local cloned Hue repository.
 
-FROM ubuntu:18.04
+FROM --platform=linux/amd64 ubuntu:18.04
 LABEL description="Hue Project https://github.com/cloudera/hue"
+# 替换 Ubuntu 18.04 (bionic) 软件源为阿里云镜像（支持 arm64 架构）
+RUN sed -i s@/ports.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
+    sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
+    apt-get clean
 
 RUN apt-get update -y && apt-get install -y \
   build-essential \
@@ -47,21 +51,21 @@ COPY desktop/conf.dist desktop/conf
 RUN curl -sL https://deb.nodesource.com/setup_10.x | sudo bash - \
   && apt-get install -y nodejs
 
-RUN PREFIX=/usr/share make install
-RUN useradd -ms /bin/bash hue && chown -R hue /usr/share/hue
+#RUN PREFIX=/usr/share make install
+#RUN useradd -ms /bin/bash hue && chown -R hue /usr/share/hue
 
 # Build the docs (not in Makefile yet)
 # RUN hugo --source docs/docs-site
 
 # Only keep install dir
 WORKDIR /usr/share/hue
-RUN rm -rf /hue
+#RUN rm -rf /hue
 
 # Install DB connectors
-RUN ./build/env/bin/pip install psycopg2-binary
+#RUN ./build/env/bin/pip install psycopg2-binary
 
-COPY tools/docker/hue/conf desktop/conf
-COPY tools/docker/hue/startup.sh .
+#COPY tools/docker/hue/conf desktop/conf
+#COPY tools/docker/hue/startup.sh .
 
-EXPOSE 8888
-CMD ["./startup.sh"]
+#EXPOSE 8888
+#CMD ["./startup.sh"]
