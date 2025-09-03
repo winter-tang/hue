@@ -1470,21 +1470,90 @@ class ApiHelper {
     const self = this;
     const deferred = $.Deferred();
 
+    // 添加详细日志用于调试POST请求问题
+    console.log('fetchSourceMetadata方法被调用，准备发起AJAX请求');
+    console.log('请求参数详情:', {
+      sourceType: options.sourceType,
+      path: options.path,
+      compute: options.compute,
+      notebook: options.notebook,
+      timeout: options.timeout
+    });
+
     const isQuery = options.sourceType.indexOf('-query') !== -1;
     const sourceType = isQuery ? options.sourceType.replace('-query', '') : options.sourceType;
+    
+    console.log('isQuery:', isQuery, '处理后的sourceType:', sourceType);
+    
+    const requestUrl = AUTOCOMPLETE_API_PREFIX + (isQuery ? options.path.slice(1) : options.path).join('/');
+    console.log('构建的请求URL:', requestUrl);
+
+ // 拆分并打印每个toJSON转换结果，添加错误处理
+    let notebookJson = '';
+    try {
+      const plainNotebook = ko.toJS(options.notebook || {});
+      
+      // 添加循环引用处理函数
+      const seen = new WeakSet();
+      const replacer = (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return '[Circular]'; // 替换循环引用
+          }
+          seen.add(value);
+        }
+        return value;
+      };
+      
+      notebookJson = JSON.stringify(plainNotebook, replacer);
+      console.log('Notebook JSON转换结果:', notebookJson);
+    } catch (error) {
+      console.error('Notebook JSON转换失败:', error);
+      // 避免打印完整的循环引用对象，只打印关键信息
+      console.log('Notebook 类型:', typeof options.notebook);
+      if (options.notebook && typeof options.notebook === 'object') {
+        console.log('Notebook 包含的键:', Object.keys(options.notebook || {}));
+      }
+      // 使用安全的默认值
+      notebookJson = JSON.stringify({});
+    }
+
+    const snippetData = {
+      type: sourceType,
+      source: isQuery ? 'query' : 'data'
+    };
+    const snippetJson = ko.mapping.toJSON(snippetData);
+    console.log('Snippet JSON转换结果:', snippetJson);
+    console.log('Snippet 原始数据:', snippetData);
+
+    const clusterJson = ko.mapping.toJSON(options.compute ? options.compute : {});
+    console.log('Cluster JSON转换结果:', clusterJson);
+    console.log('Cluster 原始数据:', options.compute ? options.compute : {});
+
+    const requestData = {
+      notebook: notebookJson,
+      snippet: snippetJson,
+      cluster: clusterJson
+    };
+    
+    console.log('准备发送的请求数据:', requestData);
+    
+    console.log('即将发起AJAX POST请求...');
 
     const request = $.ajax({
+      url: requestUrl,
       type: 'POST',
-      url: AUTOCOMPLETE_API_PREFIX + (isQuery ? options.path.slice(1) : options.path).join('/'),
-      data: {
-          notebook: ko.mapping.toJSON(options.notebook || {}),
-          snippet: ko.mapping.toJSON({
-            type: sourceType,
-            source: isQuery ? 'query' : 'data'
-          }),
-          cluster: ko.mapping.toJSON(options.compute ? options.compute : '""')
-        },
-      timeout: options.timeout
+      data: requestData,
+      timeout: options.timeout,
+      beforeSend: function(xhr) {
+        console.log('AJAX请求即将发送，请求类型:', 'POST', 'URL:', requestUrl);
+      }
+    })
+    .fail(function(xhr, status, error) {
+      console.error('AJAX请求失败:', { status: status, error: error });
+    })
+    .always(function() {
+      console.log('AJAX请求完成（无论成功或失败）');
     })
       .done(data => {
         data.notFound =

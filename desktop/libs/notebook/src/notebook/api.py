@@ -582,7 +582,8 @@ def autocomplete(request, server=None, database=None, table=None, column=None, n
   # Passed by check_document_access_permission but unused by APIs
   notebook = json.loads(request.POST.get('notebook', '{}'))
   snippet = json.loads(request.POST.get('snippet', '{}'))
-  session = json.loads(request.POST.get('session', '{}'))
+  # session = json.loads(request.POST.get('session', '{}'))
+  session = notebook.get('sessions') and notebook['sessions'][0]
   LOG.info("autocomplete Session properties for notebook: %s" % notebook)
 
   try:
