@@ -96,7 +96,7 @@ class SqlAlchemyApi(Api):
   def _create_engine(self):
     if '${' in self.options['url']: # URL parameters substitution
       vars = {'user': self.user.username}
-      for _prop in self.options['session']['properties']:
+      for _prop in self.options.get('session', {}).get('properties', []):
         if _prop['name'] == 'user':
           vars['USER'] = _prop['value']
         if _prop['name'] == 'password':
@@ -115,30 +115,36 @@ class SqlAlchemyApi(Api):
 
     engine = self._create_engine()
     connection = engine.connect()
-    result = connection.execution_options(stream_results=True).execute(snippet['statement'])
+    result = connection.execution_options(stream_results=True).execute(snippet['statement'].replace('%', '%%'))
+
+    has_result_set = result.returns_rows
+
+    meta = []
+    if has_result_set:
+        meta = [{
+            'name': col[0] if (isinstance(col, tuple) or isinstance(col, dict)) else col.name if hasattr(col, 'name') else col,
+            'type': 'STRING_TYPE',
+            'comment': ''
+        } for col in (result.cursor.description if result.cursor is not None else [])]
 
     cache = {
-      'connection': connection,
-      'result': result,
-      'meta': [{
-          'name': col[0] if (type(col) is tuple or type(col) is dict) else col.name if hasattr(col, 'name') else col,
-          'type': 'STRING_TYPE',
-          'comment': ''
-        } for col in result.cursor.description]
+        'connection': connection,
+        'result': result if has_result_set else None,
+        'meta': meta
     }
     CONNECTION_CACHE[guid] = cache
 
     return {
-      'sync': False,
-      'has_result_set': True,
-      'modified_row_count': 0,
-      'guid': guid,
-      'result': {
-        'has_more': True,
-        'data': [],
-        'meta': cache['meta'],
-        'type': 'table'
-      }
+        'sync': False,
+        'has_result_set': has_result_set,
+        'modified_row_count': 0,
+        'guid': guid,
+        'result': {
+            'has_more': has_result_set,
+            'data': [],
+            'meta': meta,
+            'type': 'table'
+        }
     }
 
   @query_error_handler
@@ -328,3 +334,4 @@ class Assist():
       return result.cursor.description, result.fetchall()
     finally:
       connection.close()
+
