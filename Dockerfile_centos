@@ -1,0 +1,73 @@
+# 使用指定平台的CentOS 7基础镜像
+FROM --platform=linux/amd64 centos:7.9.2009
+
+# 维护者信息
+LABEL maintainer="Winter"
+LABEL description="CentOS 7 image with dependencies for Cloudera Hue"
+
+# 设置阿里云镜像源
+RUN rm -f /etc/yum.repos.d/*.repo && \
+    curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo && \
+    sed -i 's/$releasever/7/g' /etc/yum.repos.d/CentOS-Base.repo
+
+# 系统更新与基础依赖
+RUN yum clean all && \
+    yum update -y && \
+    yum install -y \
+        gcc gcc-c++ make python-devel python-setuptools \
+        krb5-devel libxml2-devel libxslt-devel cyrus-sasl-devel \
+        openldap-devel sqlite-devel gmp-devel openssl-devel \
+        wget git tar unzip which && \
+    yum clean all
+
+# 安装Node.js 10.24.1
+RUN rpm -ivh https://rpm.nodesource.com/pub_10.x/el/7/x86_64/nodesource-release-el7-1.noarch.rpm && \
+    yum install -y nodejs && \
+    yum clean all
+
+# 安装Python工具链
+RUN wget https://mirrors.aliyun.com/pypi/get-pip.py && \
+    python get-pip.py && \
+    rm -f get-pip.py
+
+# 安装数据库驱动和开发库
+RUN yum install -y \
+    mysql-devel mariadb-devel \
+    postgresql-devel sqlite-devel \
+    libffi-devel zlib-devel freetype-devel fontconfig \
+    java-1.8.0-openjdk-devel
+
+# 配置Node.js环境
+RUN wget --no-check-certificate https://nodejs.org/dist/v10.24.1/node-v10.24.1-linux-x64.tar.xz && \
+    tar -xf node-v10.24.1-linux-x64.tar.xz -C /usr/local --strip-components=1 && \
+    ln -sf /usr/local/bin/node /usr/bin/node && \
+    ln -sf /usr/local/bin/npm /usr/bin/npm
+
+# 验证安装
+RUN node -v && \
+    npm -v
+
+# 设置 Maven 版本变量（便于后续维护）
+ENV MAVEN_VERSION=3.9.11 \
+    MAVEN_HOME=/opt/maven
+# 1. 安装依赖工具 & 下载 Maven
+
+    # 下载并解压 Maven
+RUN wget -q https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz -P /tmp && \
+    tar -zxvf /tmp/apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt/ && \
+    # 创建软链接并清理缓存
+    ln -s /opt/apache-maven-${MAVEN_VERSION} ${MAVEN_HOME} && \
+    rm -f /tmp/apache-maven-*.tar.gz 
+
+
+# 创建Hue工作目录
+RUN mkdir -p /opt/hue
+WORKDIR /opt/hue
+
+# 注意：由于Hue源码需要从宿主机挂载，这里不包含实际的Hue代码
+# 镜像构建时不会执行make npm-install，因为需要实际的Hue代码
+# 该命令会在容器运行时执行
+
+# 容器启动时默认进入bash
+CMD ["/bin/bash"]
+
